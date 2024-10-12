@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CustomerOrderApi.Data;
 using CustomerOrderApi.Models;
+using Microsoft.AspNetCore.Authorization;
+
 
 namespace CustomerOrderApi.Controllers
 {
@@ -86,6 +88,7 @@ namespace CustomerOrderApi.Controllers
 
         // DELETE: api/Customers/5
         [HttpDelete("{id}")]
+        [Authorize] 
         public async Task<IActionResult> DeleteCustomer(int id)
         {
             var customer = await _context.Customers.FindAsync(id);
