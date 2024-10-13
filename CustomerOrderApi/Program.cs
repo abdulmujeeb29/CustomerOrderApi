@@ -1,4 +1,5 @@
 using CustomerOrderApi.Data;
+using CustomerOrderApi.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -11,7 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -84,3 +85,12 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+//Postgres cluster customer-api created
+//  Username:    postgres
+//Password:    g5qiHkjVWx4pLW8
+//  Hostname:    customer - api.internal
+//  Flycast:     fdaa: a: 7cc3: 0:1::2
+//  Proxy port:  5432
+//  Postgres port:  5433
+//  Connection string: postgres://postgres:g5qiHkjVWx4pLW8@customer-api.flycast:5432
