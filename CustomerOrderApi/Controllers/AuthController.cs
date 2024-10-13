@@ -22,6 +22,7 @@ namespace CustomerOrderApi.Controllers
                 var tokenHandler = new JwtSecurityTokenHandler();   
                 var key = Encoding.UTF8.GetBytes(_key);
 
+                // Define the token claims and expiration
                 var tokenDescriptor = new SecurityTokenDescriptor
                 {
                     Subject = new ClaimsIdentity(new Claim[]
@@ -32,6 +33,7 @@ namespace CustomerOrderApi.Controllers
                     Expires = DateTime.UtcNow.AddHours(1),
                     SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
                 };
+                // Create and return the JWT
                 var token = tokenHandler.CreateToken(tokenDescriptor);
                 var tokenString = tokenHandler.WriteToken(token);
 
