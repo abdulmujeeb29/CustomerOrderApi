@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CustomerOrderApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20241013231300_change0-database")]
-    partial class change0database
+    [Migration("20241014011956_initial-migration")]
+    partial class initialmigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
