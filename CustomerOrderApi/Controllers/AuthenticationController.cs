@@ -8,9 +8,11 @@ namespace CustomerOrderApi.Controllers
     public class AuthenticationController : Controller
     {
         private readonly HttpClient _httpClient;
-        public AuthenticationController(IHttpClientFactory httpClientFactory)
+        private readonly string _apiBaseUrl;
+        public AuthenticationController(IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _httpClient = httpClientFactory.CreateClient();
+            _apiBaseUrl = configuration["ApiSettings:BaseUrl"];
         }
         public IActionResult Index()
         {
@@ -27,7 +29,7 @@ namespace CustomerOrderApi.Controllers
         {
             
             var jsonContent = new StringContent(JsonSerializer.Serialize(user),Encoding.UTF8,"application/json");
-            var response = await _httpClient.PostAsync("https://localhost:7052/api/Auth/register", jsonContent);
+            var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/Auth/register", jsonContent);
 
             if (response.IsSuccessStatusCode)
             {
@@ -46,7 +48,7 @@ namespace CustomerOrderApi.Controllers
         public async Task<IActionResult> Login(User user)
         {
             var jsonContent = new StringContent(JsonSerializer.Serialize(user), Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("https://localhost:7052/api/Auth/login", jsonContent);
+            var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/Auth/login", jsonContent);
 
             if (response.IsSuccessStatusCode)
             {
@@ -72,7 +74,7 @@ namespace CustomerOrderApi.Controllers
         [HttpPost]
         public async Task<IActionResult> LogoutApi()
         {
-            var response = await _httpClient.PostAsync("https://localhost:7052/api/Auth/logout", null);
+            var response = await _httpClient.PostAsync($"{_apiBaseUrl}/api/Auth/logout", null);
 
             if (response.IsSuccessStatusCode)
             {
