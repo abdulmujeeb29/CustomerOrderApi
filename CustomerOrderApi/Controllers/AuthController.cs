@@ -27,7 +27,7 @@ namespace CustomerOrderApi.Controllers
             //hardcoded user credentials just to keep things basic and focus on the jwt authentication task 
             if (retrievedUser == null)
             {
-                return NotFound();
+                return Unauthorized();
             }
 
             if (retrievedUser.Password == user.Password)
@@ -58,6 +58,18 @@ namespace CustomerOrderApi.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] User user)
         {
+            var existingUser = _context.Users.FirstOrDefault(u=> u.Email==user.Email);
+            if (existingUser != null)
+            {
+                return BadRequest("A user with the mail already exists");
+            }
+
+            var existingUsername = _context.Users.FirstOrDefault(u => u.UserName == user.UserName);
+            if (existingUsername != null)
+            {
+                return BadRequest("Username taken already ");
+            }
+
 
             try
             {
