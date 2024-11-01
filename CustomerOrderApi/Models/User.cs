@@ -9,6 +9,9 @@ namespace CustomerOrderApi.Models
         public string UserName { get; set; }
         public string Email { get; set; }
         public string Password { get; set; }
+        public bool IsEmailVerified { get; set; } = false;
+        public string? EmailVerificationToken { get; set; }      
 
     }
 }
+
