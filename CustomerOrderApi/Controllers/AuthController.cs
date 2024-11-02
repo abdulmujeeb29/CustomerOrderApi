@@ -159,6 +159,81 @@ namespace CustomerOrderApi.Controllers
             
             return Ok(new { Message = "Logged out successfully" });
         }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] string email)
+        {
+            var user = _context.Users.FirstOrDefault(u => u.Email == email);
+
+            if (user == null)
+            {
+                return BadRequest("User with this email does not exist.");
+            }
+
+            // Generate reset token and expiry
+            user.PasswordResetToken = Guid.NewGuid().ToString();
+            user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1);
+
+            await _context.SaveChangesAsync();
+
+            try
+            {
+                await SendResetPasswordEmail(user); // Send email with reset link
+            }
+            catch (Exception emailEx)
+            {
+                Console.WriteLine($"Email sending failed: {emailEx.Message}");
+                return StatusCode(500, "Error sending email.");
+            }
+
+            return Ok("Password reset link has been sent to your email.");
+        }
+
+        private async Task SendResetPasswordEmail(User user)
+        {
+            var email = new MimeMessage();
+            email.From.Add(MailboxAddress.Parse("your-email@example.com"));
+            email.To.Add(MailboxAddress.Parse(user.Email));
+            email.Subject = "Password Reset";
+
+            // Get the BaseUrl from appsettings
+            var baseUrl = _configuration["ApiSettings:BaseUrl"];
+            var resetLink = $"{baseUrl}/api/Auth/reset-password?token={user.PasswordResetToken}";
+
+            email.Body = new TextPart("plain")
+            {
+                Text = $"Click the link to reset your password: {resetLink}"
+            };
+
+            using var smtp = new SmtpClient();
+            await smtp.ConnectAsync("smtp.gmail.com", 587, MailKit.Security.SecureSocketOptions.StartTls);
+            await smtp.AuthenticateAsync("thalesmedia29@gmail.com", "dzzypmguiznfkwnr");
+            await smtp.SendAsync(email);
+            await smtp.DisconnectAsync(true);
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromQuery] string token, [FromBody] string newPassword)
+        {
+            var user = _context.Users.FirstOrDefault(u => u.PasswordResetToken == token && u.PasswordResetTokenExpiry > DateTime.UtcNow);
+
+            if (user == null)
+            {
+                return BadRequest("Invalid or expired token.");
+            }
+
+            // Update user's password and clear the reset token
+            user.Password = newPassword; // Hash this password in a real application
+            user.PasswordResetToken = null;
+            user.PasswordResetTokenExpiry = null;
+
+            await _context.SaveChangesAsync();
+
+            return Ok("Password has been reset successfully.");
+        }
+
+
+
     }
 
 }
