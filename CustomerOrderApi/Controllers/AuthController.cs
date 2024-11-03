@@ -197,7 +197,7 @@ namespace CustomerOrderApi.Controllers
             email.Subject = "Password Reset";
 
             // Get the BaseUrl from appsettings
-            var baseUrl = _configuration["ApiSettings:BaseUrl"];
+            var baseUrl = _configuration["ApiSettings:frontEndBaseUrl"];
             var resetLink = $"{baseUrl}/Authentication/ResetPassword?token={user.PasswordResetToken}";
 
             email.Body = new TextPart("plain")
