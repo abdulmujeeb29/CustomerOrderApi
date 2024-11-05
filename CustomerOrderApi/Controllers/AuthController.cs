@@ -9,6 +9,10 @@ using CustomerOrderApi.Models;
 using CustomerOrderApi.Data;
 using MimeKit;
 using MailKit.Net.Smtp;
+using System.Linq;
+using Azure.Identity;
+using CustomerOrderApi.Request;
+using Microsoft.AspNetCore.Identity;
 
 namespace CustomerOrderApi.Controllers
 {
@@ -113,6 +117,7 @@ namespace CustomerOrderApi.Controllers
 
         private async Task SendVerificationEmail(User user)
         {
+            var username =_context.Users.FirstOrDefault(u=>u.UserName == user.UserName);
             var email = new MimeMessage();
             email.From.Add(MailboxAddress.Parse("thalesmedia229@gmail.com"));
             email.To.Add(MailboxAddress.Parse(user.Email));
@@ -125,8 +130,24 @@ namespace CustomerOrderApi.Controllers
 
             email.Body = new TextPart("plain")
             {
-                Text = $"Click the link to verify your email : {verificationLink}"
+                Text = $@"Dear {username},
+
+                 Thank you for registering with us! We’re excited to have you on board.
+
+                To complete your registration and activate your account, please verify your email address by clicking the link below:
+
+                 [Verify Your Email]({verificationLink})
+
+                 If the link does not work, you can copy and paste the URL into your web browser:
+
+                   {verificationLink}
+
+                 If you did not create an account with us, please disregard this email.
+
+                     Thank you,  
+                  The CustomerOrderWeb Team"
             };
+
 
             using var smtp = new SmtpClient();
             await smtp.ConnectAsync("smtp.gmail.com", 587, MailKit.Security.SecureSocketOptions.StartTls);
@@ -191,6 +212,7 @@ namespace CustomerOrderApi.Controllers
 
         private async Task SendResetPasswordEmail(User user)
         {
+            var username = _context.Users.FirstOrDefault(u => u.UserName == user.UserName);
             var email = new MimeMessage();
             email.From.Add(MailboxAddress.Parse("your-email@example.com"));
             email.To.Add(MailboxAddress.Parse(user.Email));
@@ -202,8 +224,24 @@ namespace CustomerOrderApi.Controllers
 
             email.Body = new TextPart("plain")
             {
-                Text = $"Click the link to reset your password: {resetLink}"
+                Text = $@"Dear {username},
+
+                We received a request to reset your password. If you did not make this request, you can safely ignore this email.
+
+                 To reset your password, please click the link below:
+
+                 [Reset Your Password]({resetLink})
+
+                If the link does not work, you can copy and paste the following URL into your web browser:
+
+                 {resetLink}
+
+                 For security reasons, this link will expire in 24 hours. After resetting your password, you will be able to log in to your account with your new password.
+
+                 Thank you,  
+                 The CustomerOrderWeb Team"
             };
+
 
             using var smtp = new SmtpClient();
             await smtp.ConnectAsync("smtp.gmail.com", 587, MailKit.Security.SecureSocketOptions.StartTls);
@@ -233,7 +271,29 @@ namespace CustomerOrderApi.Controllers
         }
 
 
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword( [FromBody] ChangePasswordRequest request)
+        {
+            var userEmail = User.Identity?.Name;
+            var user = _context.Users.FirstOrDefault(u=>u.Email==userEmail);
 
+            if (user == null) {
+                return Unauthorized("User not Found");
+                    }
+            
+            if (user.Password != request.CurrentPassword)
+            {
+                return BadRequest("cURRENT pASSWORD IS in inCORRECT");
+            }
+            if (request.NewPassword != request.ConfirmPassword)
+            {
+                return BadRequest("New password field do not match with the confirm password field");
+            }
+            user.Password = request.NewPassword;
+            await _context.SaveChangesAsync();
+
+            return Ok("Password changed successfully.");
+        }
     }
 
 }
