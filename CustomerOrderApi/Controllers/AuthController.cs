@@ -13,6 +13,7 @@ using System.Linq;
 using Azure.Identity;
 using CustomerOrderApi.Request;
 using Microsoft.AspNetCore.Identity;
+using CustomerOrderApi.DTOs;
 
 namespace CustomerOrderApi.Controllers
 {
@@ -29,16 +30,16 @@ namespace CustomerOrderApi.Controllers
         }
 
         [HttpPost("login")]
-        public IActionResult Login([FromBody] User user)
+        public IActionResult Login([FromBody] LoginUserDto loginuserDto)
         {
-            var retrievedUser = _context.Users.FirstOrDefault(u=> u.Email == user.Email);
+            var retrievedUser = _context.Users.FirstOrDefault(u=> u.Email == loginuserDto.Email);
             
             if (retrievedUser == null)
             {
                 return Unauthorized();
             }
 
-            if (retrievedUser.Password == user.Password)
+            if (retrievedUser.Password == loginuserDto.Password)
             {
                 var tokenHandler = new JwtSecurityTokenHandler();   
                 var key = Encoding.UTF8.GetBytes(_key);
@@ -48,7 +49,7 @@ namespace CustomerOrderApi.Controllers
                 {
                     Subject = new ClaimsIdentity(new Claim[]
                     {
-                        new Claim(ClaimTypes.Name, user.Email)
+                        new Claim(ClaimTypes.Name, loginuserDto.Email)
 
                     }),
                     Expires = DateTime.UtcNow.AddHours(1),
@@ -64,26 +65,37 @@ namespace CustomerOrderApi.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] User user)
+        public async Task<IActionResult> Register([FromBody] RegisterUserDto registeruserDto)
         {
-            if (user == null)
+            if (registeruserDto == null)
             {
                 return BadRequest("User data is null.");
             }
-            var existingUser = _context.Users.FirstOrDefault(u=> u.Email==user.Email);
+            var existingUser = _context.Users.FirstOrDefault(u=> u.Email==registeruserDto.Email);
             if (existingUser != null)
             {
                 return BadRequest("A user with the mail already exists");
             }
 
-            var existingUsername = _context.Users.FirstOrDefault(u => u.UserName == user.UserName);
+            var existingUsername = _context.Users.FirstOrDefault(u => u.UserName == registeruserDto.UserName);
             if (existingUsername != null)
             {
                 return BadRequest("Username taken already ");
             }
 
-            user.EmailVerificationToken = Guid.NewGuid().ToString();
+            // Generate email verification token
+            var emailVerificationToken = Guid.NewGuid().ToString();
             //Console.WriteLine(user.EmailVerificationToken);
+
+
+            // Map RegisterUserDto to User model
+            var user = new User
+            {
+                UserName = registeruserDto.UserName,
+                Email = registeruserDto.Email,
+                Password = registeruserDto.Password,  // Ensure to hash the password in production
+                EmailVerificationToken = emailVerificationToken
+            };
             try
             {
                 
