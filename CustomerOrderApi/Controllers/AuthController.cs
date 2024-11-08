@@ -306,6 +306,21 @@ namespace CustomerOrderApi.Controllers
 
             return Ok("Password changed successfully.");
         }
+
+        [HttpPost("check-user")]
+        public async Task<IActionResult> CheckUser(CheckUserDto checkuserdto)
+
+        {
+            var user = _context.Users.FirstOrDefault(u=>u.Email == checkuserdto.Email);
+            if (user != null)
+            {
+                return Ok("User successfully retrieved");
+            }
+            else
+            {
+                return BadRequest("User not found");
+            }
+        }
     }
 
 }
