@@ -1,5 +1,6 @@
 using CustomerOrderApi.Data;
 using CustomerOrderApi.Models;
+using CustomerOrderApi.Repositories;
 using CustomerOrderApi.Repositories.Interface;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -77,7 +78,9 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 
 var app = builder.Build();
 
