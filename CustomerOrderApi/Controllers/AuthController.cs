@@ -14,6 +14,7 @@ using Azure.Identity;
 using CustomerOrderApi.Request;
 using Microsoft.AspNetCore.Identity;
 using CustomerOrderApi.DTOs;
+using CustomerOrderApi.Repositories.Interface;
 
 namespace CustomerOrderApi.Controllers
 {
@@ -21,19 +22,20 @@ namespace CustomerOrderApi.Controllers
     public class AuthController : ControllerBase
     {
         private readonly string _key = "MIICWwIBAAKBgHZO8IQouqjDyY47ZDGdw9jPDVHadgfT1kP3igz5xamdVaYPHaN24UZMeSXjW9sW";
-        private readonly AppDbContext _context;
+        
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IConfiguration _configuration;
-        public AuthController(AppDbContext context, IConfiguration configuration)
+        public AuthController(IUnitOfWork unitOfWork, IConfiguration configuration)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
             _configuration = configuration;
         }
 
         [HttpPost("login")]
-        public IActionResult Login([FromBody] LoginUserDto loginuserDto)
+        public async Task<IActionResult> Login([FromBody] LoginUserDto loginuserDto)
         {
-            var retrievedUser = _context.Users.FirstOrDefault(u=> u.Email == loginuserDto.Email);
-            
+            var retrievedUser = await _unitOfWork.Users.GetUserByEmailAsync(loginuserDto.Email);
+
             if (retrievedUser == null)
             {
                 return Unauthorized();
@@ -71,13 +73,13 @@ namespace CustomerOrderApi.Controllers
             {
                 return BadRequest("User data is null.");
             }
-            var existingUser = _context.Users.FirstOrDefault(u=> u.Email==registeruserDto.Email);
+            var existingUser = await _unitOfWork.Users.GetUserByEmailAsync(registeruserDto.Email);
             if (existingUser != null)
             {
                 return BadRequest("A user with the mail already exists");
             }
 
-            var existingUsername = _context.Users.FirstOrDefault(u => u.UserName == registeruserDto.UserName);
+            var existingUsername = await _unitOfWork.Users.GetUserByUsernameAsync(registeruserDto.UserName);
             if (existingUsername != null)
             {
                 return BadRequest("Username taken already ");
@@ -98,9 +100,11 @@ namespace CustomerOrderApi.Controllers
             };
             try
             {
-                
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync(); //had errors so i had to await the save operation
+
+                ;
+
+                await _unitOfWork.Users.AddUserAsync(user);
+                await _unitOfWork.SaveChangesAsync();  //had errors so i had to await the save operation
                 try
                 {
                     await SendVerificationEmail(user); // Attempt to send the verification email
@@ -129,7 +133,7 @@ namespace CustomerOrderApi.Controllers
 
         private async Task SendVerificationEmail(User user)
         {
-            var username =_context.Users.FirstOrDefault(u=>u.UserName == user.UserName);
+            var username = await _unitOfWork.Users.GetUserByUsernameAsync(user.UserName);
             var email = new MimeMessage();
             email.From.Add(MailboxAddress.Parse("thalesmedia229@gmail.com"));
             email.To.Add(MailboxAddress.Parse(user.Email));
@@ -171,8 +175,8 @@ namespace CustomerOrderApi.Controllers
         [HttpGet("verify-email")]
         public async Task<IActionResult> VerifyEmail(string token)
         {
-            var user = _context.Users.FirstOrDefault(u => u.EmailVerificationToken == token);
-
+            //var user = _context.Users.FirstOrDefault(u => u.EmailVerificationToken == token);
+            var user = await _unitOfWork.Users.GetUserByEmailVerificationTokenAsync(token);
             if (user == null) 
                 {
                     return BadRequest("Invalid verification token.");
@@ -180,7 +184,7 @@ namespace CustomerOrderApi.Controllers
 
             user.IsEmailVerified = true;
             user.EmailVerificationToken = token;
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             return Ok("Email verified Successfully");
             }
@@ -196,7 +200,7 @@ namespace CustomerOrderApi.Controllers
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] string email)
         {
-            var user = _context.Users.FirstOrDefault(u => u.Email == email);
+            var user = await _unitOfWork.Users.GetUserByEmailAsync(email);
 
             if (user == null)
             {
@@ -207,7 +211,7 @@ namespace CustomerOrderApi.Controllers
             user.PasswordResetToken = Guid.NewGuid().ToString();
             user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1);
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             try
             {
@@ -224,7 +228,7 @@ namespace CustomerOrderApi.Controllers
 
         private async Task SendResetPasswordEmail(User user)
         {
-            var username = _context.Users.FirstOrDefault(u => u.UserName == user.UserName);
+            var username = await _unitOfWork.Users.GetUserByUsernameAsync(user.UserName);
             var email = new MimeMessage();
             email.From.Add(MailboxAddress.Parse("your-email@example.com"));
             email.To.Add(MailboxAddress.Parse(user.Email));
@@ -265,7 +269,8 @@ namespace CustomerOrderApi.Controllers
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromQuery] string token, [FromBody] string newPassword)
         {
-            var user = _context.Users.FirstOrDefault(u => u.PasswordResetToken == token && u.PasswordResetTokenExpiry > DateTime.UtcNow);
+            //var user = _context.Users.FirstOrDefault(u => u.PasswordResetToken == token && u.PasswordResetTokenExpiry > DateTime.UtcNow);
+            var user = await _unitOfWork.Users.GetUserByPasswordResetTokenAsync(token);
 
             if (user == null)
             {
@@ -277,7 +282,7 @@ namespace CustomerOrderApi.Controllers
             user.PasswordResetToken = null;
             user.PasswordResetTokenExpiry = null;
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             return Ok("Password has been reset successfully.");
         }
@@ -287,7 +292,7 @@ namespace CustomerOrderApi.Controllers
         public async Task<IActionResult> ChangePassword( [FromBody] ChangePasswordRequest request)
         {
             var userEmail = User.Identity?.Name;
-            var user = _context.Users.FirstOrDefault(u=>u.Email==userEmail);
+            var user = await _unitOfWork.Users.GetUserByEmailAsync(userEmail);
 
             if (user == null) {
                 return Unauthorized("User not Found");
@@ -302,7 +307,7 @@ namespace CustomerOrderApi.Controllers
                 return BadRequest("New password field do not match with the confirm password field");
             }
             user.Password = request.NewPassword;
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
 
             return Ok("Password changed successfully.");
         }
@@ -311,7 +316,7 @@ namespace CustomerOrderApi.Controllers
         public async Task<IActionResult> CheckUser(CheckUserDto checkuserdto)
 
         {
-            var user = _context.Users.FirstOrDefault(u=>u.Email == checkuserdto.Email);
+            var user = await _unitOfWork.Users.GetUserByUsernameAsync(checkuserdto.Email);
             if (user != null)
             {
                 return Ok("User successfully retrieved");
