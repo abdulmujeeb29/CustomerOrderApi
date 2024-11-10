@@ -19,7 +19,7 @@ When working with databases, you often have to make multiple related changes. Fo
 Without a Unit of Work, each repository might save these changes separately, which could lead to errors if something goes wrong halfway through. For instance, if step 1 and 2 complete, but step 3 fails, you’d have an incomplete order in the database.
 
 
-# Summary
+# Summmary
 ## Repository Pattern:
 
 Handles data access and abstracts away database logic.
