@@ -19,7 +19,8 @@ namespace CustomerOrderApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Order>>> GetOrders()
         {
-            return await _unitOfWork.Orders.GetAllAsync();
+            var orders = await _unitOfWork.Orders.GetAllAsync();
+            return Ok(orders);
         }
 
         [HttpGet("{id}")]
