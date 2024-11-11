@@ -9,6 +9,7 @@ using CustomerOrderApi.Data;
 using CustomerOrderApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using CustomerOrderApi.DTOs;
+using CustomerOrderApi.Repositories.Interface;
 
 
 namespace CustomerOrderApi.Controllers
@@ -17,18 +18,18 @@ namespace CustomerOrderApi.Controllers
     [ApiController]
     public class CustomersController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public CustomersController(AppDbContext context)
+        public CustomersController(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
         // GET: api/Customers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<CustomerDto>>> GetCustomers()
         {
-            var customers = await _context.Customers.ToListAsync();
+            var customers = await _unitOfWork.Customers.GetAllAsync();
 
             // Map Customer to CustomerDto
             var customerDtos = customers.Select(c => new CustomerDto
@@ -46,7 +47,7 @@ namespace CustomerOrderApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<CustomerDto>> GetCustomer(int id)
         {
-            var customer = await _context.Customers.FindAsync(id);
+            var customer = await _unitOfWork.Customers.GetByIdAsync(id);
 
             if (customer == null)
             {
@@ -71,12 +72,12 @@ namespace CustomerOrderApi.Controllers
         public async Task<IActionResult> PutCustomer(int id, CustomerDto customerDto)
         {
 
-            if (!CustomerExists(id))
+            if (! await CustomerExists(id))
             {
                 return NotFound();
             }
 
-            var customer = await _context.Customers.FindAsync(id);
+            var customer = await _unitOfWork.Customers.GetByIdAsync(id);
             if (customer == null)
             {
                 return NotFound();
@@ -90,7 +91,8 @@ namespace CustomerOrderApi.Controllers
 
             try
             {
-                await _context.SaveChangesAsync();
+                _unitOfWork.Customers.UpdateAsync(customer);
+                await _unitOfWork.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -114,8 +116,8 @@ namespace CustomerOrderApi.Controllers
                 Address = customerDto.Address
             };
 
-            _context.Customers.Add(customer);
-            await _context.SaveChangesAsync();
+            await _unitOfWork.Customers.AddAsync(customer);
+            await _unitOfWork.SaveChangesAsync();
 
             return CreatedAtAction("GetCustomer", new { id = customer.Id }, customerDto);
         }
@@ -125,21 +127,21 @@ namespace CustomerOrderApi.Controllers
         [Authorize] 
         public async Task<IActionResult> DeleteCustomer(int id)
         {
-            var customer = await _context.Customers.FindAsync(id);
+            var customer = await _unitOfWork.Customers.GetByIdAsync(id);
             if (customer == null)
             {
                 return NotFound();
             }
 
-            _context.Customers.Remove(customer);
-            await _context.SaveChangesAsync();
+            await _unitOfWork.Customers.DeleteAsync(customer);
+            await _unitOfWork.SaveChangesAsync();
 
             return NoContent();
         }
 
-        private bool CustomerExists(int id)
+        private async Task<bool> CustomerExists(int id)
         {
-            return _context.Customers.Any(e => e.Id == id);
+            return await _unitOfWork.Customers.ExistsAsync(id);
         }
     }
 }
