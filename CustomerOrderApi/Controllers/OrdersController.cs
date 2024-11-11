@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CustomerOrderApi.Models;
+using CustomerOrderApi.Repositories.Interface;
 
 namespace CustomerOrderApi.Controllers
 {
@@ -9,22 +10,22 @@ namespace CustomerOrderApi.Controllers
     [ApiController]
     public class OrdersController:ControllerBase
     {
-        private readonly AppDbContext _context;
-        public OrdersController(AppDbContext context) {
-            _context = context;
-        
-        }
+        private readonly IUnitOfWork _unitOfWork;
 
+        public OrdersController(IUnitOfWork unitOfWork)
+        {
+            _unitOfWork = unitOfWork;
+        }
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Order>>> GetOrders()
         {
-            return await _context.Orders.ToListAsync(); 
+            return await _unitOfWork.Orders.GetAllAsync();
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Order>> GetOrder(int id)
         {
-            var order = await _context.Orders.FindAsync(id);
+            var order = await _unitOfWork.Orders.GetByIdAsync(id);
             if (order == null)
             {
                 return NotFound();
@@ -35,8 +36,8 @@ namespace CustomerOrderApi.Controllers
         [HttpPost]
         public async Task<ActionResult<Customer>> CreateOrder(Order order)
         {
-            _context.Orders.Add(order); 
-            await _context.SaveChangesAsync();
+            _unitOfWork.Orders.AddAsync(order);
+            await _unitOfWork.SaveChangesAsync();
 
             return CreatedAtAction("GetOrder", new { id = order.Id }, order);
         }

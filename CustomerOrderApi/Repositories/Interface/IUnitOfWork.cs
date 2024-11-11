@@ -4,6 +4,7 @@
     {
         IUserRepository Users { get; }
         ICustomerRepository Customers { get; }
+        IOrderRepository Orders { get; }
         Task SaveChangesAsync();
     }
 }
