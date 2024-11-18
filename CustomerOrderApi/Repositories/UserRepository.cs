@@ -1,4 +1,5 @@
 ﻿using CustomerOrderApi.Data;
+using CustomerOrderApi.DTOs;
 using CustomerOrderApi.Models;
 using CustomerOrderApi.Repositories.Interface;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,11 @@ namespace CustomerOrderApi.Repositories
         public async Task<User> GetUserByPasswordResetTokenAsync(string token)
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.PasswordResetToken == token && u.PasswordResetTokenExpiry > DateTime.UtcNow);
+        }
+
+        public async Task<List<User>> GetAllUsersAsync()
+        {
+            return await _context.Users.ToListAsync();
         }
     }
 }

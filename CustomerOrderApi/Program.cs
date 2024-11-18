@@ -4,11 +4,23 @@ using CustomerOrderApi.Repositories;
 using CustomerOrderApi.Repositories.Interface;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Serilog;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+// add services for logging Using Serilog Logging package  
+// Configure Serilog
+builder.Host.UseSerilog((context, config) =>
+{
+    config.WriteTo.Console() // Logs to console
+          .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Day); // Logs to file with daily rolling
+});
+
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

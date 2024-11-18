@@ -25,19 +25,24 @@ namespace CustomerOrderApi.Controllers
         
         private readonly IUnitOfWork _unitOfWork;
         private readonly IConfiguration _configuration;
-        public AuthController(IUnitOfWork unitOfWork, IConfiguration configuration)
+        private readonly ILogger<AuthController> _logger;
+        public AuthController(IUnitOfWork unitOfWork, IConfiguration configuration, ILogger<AuthController> logger)
         {
             _unitOfWork = unitOfWork;
             _configuration = configuration;
+            _logger = logger;
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginUserDto loginuserDto)
         {
+            _logger.LogInformation("Login attempt for email: {Email}", loginuserDto.Email);
+
             var retrievedUser = await _unitOfWork.Users.GetUserByEmailAsync(loginuserDto.Email);
 
             if (retrievedUser == null)
             {
+                _logger.LogWarning("Login failed: User with email {Email} not found.", loginuserDto.Email);
                 return Unauthorized();
             }
 
@@ -45,6 +50,8 @@ namespace CustomerOrderApi.Controllers
             {
                 var tokenHandler = new JwtSecurityTokenHandler();   
                 var key = Encoding.UTF8.GetBytes(_key);
+
+                _logger.LogInformation("Generating JWT for user {Email}.", loginuserDto.Email);
 
                 // Define the token claims and expiration
                 var tokenDescriptor = new SecurityTokenDescriptor
@@ -61,6 +68,7 @@ namespace CustomerOrderApi.Controllers
                 var token = tokenHandler.CreateToken(tokenDescriptor);
                 var tokenString = tokenHandler.WriteToken(token);
 
+                _logger.LogInformation("Login successful for user {Email}. Token generated.", loginuserDto.Email);
                 return Ok(new {Token = tokenString});
             }
             return Unauthorized();
@@ -69,19 +77,24 @@ namespace CustomerOrderApi.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterUserDto registeruserDto)
         {
+            _logger.LogInformation("Registering new user with email: {Email}", registeruserDto.Email);
+
             if (registeruserDto == null)
             {
+                _logger.LogError("Registration failed: Input data is null.");
                 return BadRequest("User data is null.");
             }
             var existingUser = await _unitOfWork.Users.GetUserByEmailAsync(registeruserDto.Email);
             if (existingUser != null)
             {
+                _logger.LogWarning("Registration failed: Email {Email} already exists.", registeruserDto.Email);
                 return BadRequest("A user with the mail already exists");
             }
 
             var existingUsername = await _unitOfWork.Users.GetUserByUsernameAsync(registeruserDto.UserName);
             if (existingUsername != null)
             {
+                _logger.LogWarning("Registration failed: Username {UserName} is already taken.", registeruserDto.UserName);
                 return BadRequest("Username taken already ");
             }
 
@@ -105,6 +118,9 @@ namespace CustomerOrderApi.Controllers
 
                 await _unitOfWork.Users.AddUserAsync(user);
                 await _unitOfWork.SaveChangesAsync();  //had errors so i had to await the save operation
+
+                _logger.LogInformation("User {Email} registered successfully. Sending verification email.", user.Email);
+
                 try
                 {
                     await SendVerificationEmail(user); // Attempt to send the verification email
@@ -175,17 +191,21 @@ namespace CustomerOrderApi.Controllers
         [HttpGet("verify-email")]
         public async Task<IActionResult> VerifyEmail(string token)
         {
+            _logger.LogInformation("Verifying email for token: {Token}", token);
             //var user = _context.Users.FirstOrDefault(u => u.EmailVerificationToken == token);
             var user = await _unitOfWork.Users.GetUserByEmailVerificationTokenAsync(token);
             if (user == null) 
                 {
-                    return BadRequest("Invalid verification token.");
+                _logger.LogWarning("Email verification failed: Invalid token {Token}.", token);
+
+                return BadRequest("Invalid verification token.");
                 }
 
             user.IsEmailVerified = true;
             user.EmailVerificationToken = token;
             await _unitOfWork.SaveChangesAsync();
 
+            _logger.LogInformation("Email verified successfully for user {Email}.", user.Email);
             return Ok("Email verified Successfully");
             }
 
@@ -325,6 +345,20 @@ namespace CustomerOrderApi.Controllers
             {
                 return BadRequest("User not found");
             }
+        }
+        [HttpGet("users")]
+        public async Task<IActionResult> GetAllUsers()
+        {
+            var users = await _unitOfWork.Users.GetAllUsersAsync();
+
+            var userDtos = users.Select(u => new UserDto
+            {
+                Id = u.Id,
+                UserName = u.UserName,
+                Email = u.Email
+
+            });
+            return Ok(userDtos);
         }
     }
 

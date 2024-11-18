@@ -1,4 +1,5 @@
-﻿using CustomerOrderApi.Models;
+﻿using CustomerOrderApi.DTOs;
+using CustomerOrderApi.Models;
 
 namespace CustomerOrderApi.Repositories.Interface
 {
@@ -10,5 +11,7 @@ namespace CustomerOrderApi.Repositories.Interface
         Task<bool> CheckUserExistsAsync(string email);
         Task<User> GetUserByEmailVerificationTokenAsync(string token);
         Task<User> GetUserByPasswordResetTokenAsync(string token);
+
+        Task<List<User>> GetAllUsersAsync();
     }
 }
